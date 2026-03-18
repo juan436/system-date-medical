@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Navbar } from "@/components/landing/navbar";
 import { Footer } from "@/components/landing/footer";
 import { ProgressSteps } from "@/components/scheduling/progress-steps";
@@ -22,6 +23,7 @@ interface ServiceData {
 
 export default function AgendarPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [authState, setAuthState] = useState<"loading" | "unauthenticated" | "authenticated">("loading");
   const [step, setStep] = useState(0);
   const [selectedService, setSelectedService] = useState<string | null>(null);
@@ -86,6 +88,7 @@ export default function AgendarPage() {
         },
         { token },
       );
+      queryClient.invalidateQueries({ queryKey: ["my-appointments"] });
       setSuccess(true);
     } catch (err) {
       setError((err as Error).message);
@@ -152,11 +155,16 @@ export default function AgendarPage() {
               Cita agendada
             </h1>
             <p className="mt-3 text-muted">
-              Tu cita ha sido registrada exitosamente. Te contactaremos para confirmarla.
+              Tu cita ha sido registrada exitosamente.
             </p>
-            <Button className="mt-8" onClick={() => router.push("/")}>
-              Volver al inicio
-            </Button>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+              <Button onClick={() => router.push("/mi-cuenta")}>
+                Ver mis citas
+              </Button>
+              <Button variant="outline" onClick={() => router.push("/")}>
+                Volver al inicio
+              </Button>
+            </div>
           </div>
         </main>
         <Footer />

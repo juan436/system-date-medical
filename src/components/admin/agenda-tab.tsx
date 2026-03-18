@@ -20,6 +20,13 @@ interface Appointment {
   notasPaciente?: string;
 }
 
+interface Availability {
+  cuposMaximos: number;
+  cuposOcupados: number;
+  cuposDisponibles: number;
+  disponible: boolean;
+}
+
 const statusVariant: Record<string, "default" | "success" | "warning" | "info"> = {
   pendiente: "warning",
   confirmada: "info",
@@ -36,6 +43,15 @@ const statusLabel: Record<string, string> = {
   reprogramada: "Reprogramada",
 };
 
+type StatusFilter = "todas" | "confirmada" | "cancelada" | "completada";
+
+const FILTERS: { key: StatusFilter; label: string }[] = [
+  { key: "todas", label: "Todas" },
+  { key: "confirmada", label: "Confirmadas" },
+  { key: "completada", label: "Completadas" },
+  { key: "cancelada", label: "Canceladas" },
+];
+
 function formatDate(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -46,6 +62,7 @@ function formatDate(date: Date): string {
 export function AgendaTab() {
   const [selectedDate, setSelectedDate] = useState(formatDate(new Date()));
   const [weekOffset, setWeekOffset] = useState(0);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("todas");
   const token = typeof window !== "undefined" ? localStorage.getItem("system-date-token") : null;
   const queryClient = useQueryClient();
 
@@ -57,11 +74,18 @@ export function AgendaTab() {
     refetchInterval: 30_000,
   });
 
+  const { data: availability } = useQuery({
+    queryKey: ["availability", selectedDate],
+    queryFn: () => api.get<Availability>(`/availability?date=${selectedDate}`),
+    enabled: !!selectedDate,
+  });
+
   const updateStatus = useMutation({
     mutationFn: ({ id, action }: { id: string; action: string }) =>
       api.patch<Appointment>(`/admin/appointments/${id}/${action}`, {}, { token: token! }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-appointments", selectedDate] });
+      queryClient.invalidateQueries({ queryKey: ["availability", selectedDate] });
     },
   });
 
@@ -85,7 +109,16 @@ export function AgendaTab() {
   const DAY_SHORT = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
   const MONTH_SHORT = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 
-  const activeAppointments = appointments.filter((a) => a.estado !== "cancelada");
+  // Status counts
+  const countByStatus = (estado: string) => appointments.filter((a) => a.estado === estado).length;
+  const confirmadasCount = countByStatus("confirmada");
+  const completadasCount = countByStatus("completada");
+  const canceladasCount = countByStatus("cancelada");
+
+  // Filtered appointments
+  const filteredAppointments = statusFilter === "todas"
+    ? appointments
+    : appointments.filter((a) => a.estado === statusFilter);
 
   const weekRangeLabel = `${weekDates[0].getDate()} ${MONTH_SHORT[weekDates[0].getMonth()]} - ${weekDates[6].getDate()} ${MONTH_SHORT[weekDates[6].getMonth()]}`;
 
@@ -96,13 +129,20 @@ export function AgendaTab() {
     setSelectedDate(formatDate(new Date()));
   };
 
+  // Format selected date for display
+  const MONTH_LONG = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  const DAY_LONG = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+  const [selY, selM, selD] = selectedDate.split("-").map(Number);
+  const selDateObj = new Date(selY, selM - 1, selD);
+  const selectedDateLabel = `${DAY_LONG[selDateObj.getDay()]} ${selD} de ${MONTH_LONG[selDateObj.getMonth()]}`;
+
   return (
     <div>
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold text-foreground">Agenda</h1>
           <p className="mt-1 text-sm text-muted">
-            {activeAppointments.length} citas para este día
+            {appointments.length} citas para este día
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={handleExportCsv}>
@@ -148,7 +188,6 @@ export function AgendaTab() {
             onChange={(e) => {
               if (e.target.value) {
                 setSelectedDate(e.target.value);
-                // Calculate week offset so the selected date appears in the week nav
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 const [y, m, d] = e.target.value.split("-").map(Number);
@@ -185,6 +224,75 @@ export function AgendaTab() {
         </div>
       </div>
 
+      {/* Day detail: date label + availability */}
+      <GlassCard className="mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold capitalize text-foreground">{selectedDateLabel}</p>
+            {availability ? (
+              <p className="mt-1 text-sm text-muted">
+                {availability.cuposMaximos > 0 ? (
+                  <>
+                    <span className={`font-semibold ${availability.cuposDisponibles === 0 ? "text-red-500" : availability.cuposDisponibles <= 3 ? "text-amber-500" : "text-emerald-500"}`}>
+                      {availability.cuposDisponibles}
+                    </span>
+                    {" "}cupos disponibles de {availability.cuposMaximos}
+                  </>
+                ) : (
+                  "No hay cupos configurados para este día"
+                )}
+              </p>
+            ) : (
+              <p className="mt-1 text-sm text-muted">Cargando disponibilidad...</p>
+            )}
+          </div>
+          <div className="flex gap-4 text-center">
+            <div>
+              <p className="text-lg font-bold text-blue-500">{confirmadasCount}</p>
+              <p className="text-[10px] text-muted">Confirmadas</p>
+            </div>
+            <div>
+              <p className="text-lg font-bold text-emerald-500">{completadasCount}</p>
+              <p className="text-[10px] text-muted">Completadas</p>
+            </div>
+            <div>
+              <p className="text-lg font-bold text-red-400">{canceladasCount}</p>
+              <p className="text-[10px] text-muted">Canceladas</p>
+            </div>
+          </div>
+        </div>
+      </GlassCard>
+
+      {/* Status filter tabs */}
+      <div className="mb-4 flex gap-1 rounded-xl bg-surface p-1 border border-border">
+        {FILTERS.map((f) => {
+          const count = f.key === "todas" ? appointments.length
+            : f.key === "confirmada" ? confirmadasCount
+            : f.key === "completada" ? completadasCount
+            : canceladasCount;
+          return (
+            <button
+              key={f.key}
+              onClick={() => setStatusFilter(f.key)}
+              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                statusFilter === f.key
+                  ? "bg-primary text-white shadow-sm"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              {f.label}
+              <span className={`ml-1.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold ${
+                statusFilter === f.key
+                  ? "bg-white/20 text-white"
+                  : "bg-border/40 text-muted"
+              }`}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Appointments list */}
       {isLoading ? (
         <div className="space-y-3">
@@ -192,13 +300,17 @@ export function AgendaTab() {
             <div key={i} className="h-20 animate-pulse rounded-2xl bg-border/20" />
           ))}
         </div>
-      ) : appointments.length === 0 ? (
+      ) : filteredAppointments.length === 0 ? (
         <GlassCard className="py-12 text-center">
-          <p className="text-muted">No hay citas programadas para esta fecha.</p>
+          <p className="text-muted">
+            {appointments.length === 0
+              ? "No hay citas programadas para esta fecha."
+              : `No hay citas ${statusFilter === "todas" ? "" : statusLabel[statusFilter]?.toLowerCase() + "s"} para esta fecha.`}
+          </p>
         </GlassCard>
       ) : (
         <div className="space-y-3">
-          {appointments.map((appt) => (
+          {filteredAppointments.map((appt) => (
             <GlassCard key={appt.id} className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-light font-display text-sm font-bold text-primary">

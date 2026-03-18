@@ -62,7 +62,16 @@ export function Navbar() {
     router.push("/");
   };
 
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const panelHref = session?.rol === "admin" ? "/admin" : "/mi-cuenta";
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const close = () => setDropdownOpen(false);
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [dropdownOpen]);
 
   // Extract short name for branding (e.g., "Dra. García")
   const brandName = doctor?.nombreCompleto
@@ -75,14 +84,51 @@ export function Navbar() {
       })()
     : null;
 
+  const initials = session?.nombre
+    ? session.nombre.charAt(0).toUpperCase()
+    : "U";
+
   const authSection = !checked ? null : session ? (
     <>
-      <Link href={panelHref}>
-        <Button variant="ghost" size="sm">Mi Panel</Button>
-      </Link>
       <Link href="/agendar">
         <Button size="sm">Agendar Cita</Button>
       </Link>
+      <div className="relative">
+        <button
+          onClick={(e) => { e.stopPropagation(); setDropdownOpen((o) => !o); }}
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-white transition-shadow hover:ring-2 hover:ring-primary/30"
+          title={session.nombre || session.email}
+        >
+          {initials}
+        </button>
+        {dropdownOpen && (
+          <div className="absolute right-0 mt-2 w-48 rounded-xl border border-border/50 bg-background py-1 shadow-lg">
+            <div className="border-b border-border/30 px-4 py-2.5">
+              <p className="truncate text-sm font-medium text-foreground">{session.nombre}</p>
+              <p className="truncate text-xs text-muted">{session.email}</p>
+            </div>
+            <Link
+              href={panelHref}
+              onClick={() => setDropdownOpen(false)}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-surface"
+            >
+              <svg className="h-4 w-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+              </svg>
+              Mi Panel
+            </Link>
+            <button
+              onClick={() => { handleLogout(); setDropdownOpen(false); }}
+              className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+              </svg>
+              Cerrar sesión
+            </button>
+          </div>
+        )}
+      </div>
     </>
   ) : (
     <>

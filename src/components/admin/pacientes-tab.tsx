@@ -57,7 +57,7 @@ export function PacientesTab() {
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ nombre: "", apellido: "", telefono: "" });
+  const [editForm, setEditForm] = useState({ nombre: "", apellido: "", cedula: "", telefono: "" });
 
   const { data: paginatedResult, isLoading } = useQuery({
     queryKey: ["admin-patients", searchQuery, page],
@@ -81,7 +81,7 @@ export function PacientesTab() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: { nombre: string; apellido: string; telefono: string }) =>
+    mutationFn: (data: { nombre: string; apellido: string; cedula: string; telefono: string }) =>
       api.patch(`/admin/patients/${selectedPatient}`, data, { token: token! }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-patients"] });
@@ -96,6 +96,7 @@ export function PacientesTab() {
     setEditForm({
       nombre: selectedPatientData.nombre,
       apellido: selectedPatientData.apellido,
+      cedula: selectedPatientData.cedula,
       telefono: selectedPatientData.telefono,
     });
     setEditing(true);
@@ -192,7 +193,7 @@ export function PacientesTab() {
                             {patient.nombre} {patient.apellido}
                           </p>
                           <p className="truncate text-xs text-muted">
-                            C.C. {patient.cedula} · {patient.telefono}
+                            C.I {patient.cedula} · {patient.telefono}
                           </p>
                         </div>
                       </div>
@@ -256,12 +257,20 @@ export function PacientesTab() {
                           className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
                         />
                       </div>
-                      <input
-                        value={editForm.telefono}
-                        onChange={(e) => setEditForm((f) => ({ ...f, telefono: e.target.value }))}
-                        placeholder="Teléfono"
-                        className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
-                      />
+                      <div className="flex gap-2">
+                        <input
+                          value={editForm.cedula}
+                          onChange={(e) => setEditForm((f) => ({ ...f, cedula: e.target.value }))}
+                          placeholder="Cédula"
+                          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
+                        />
+                        <input
+                          value={editForm.telefono}
+                          onChange={(e) => setEditForm((f) => ({ ...f, telefono: e.target.value }))}
+                          placeholder="Teléfono"
+                          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
+                        />
+                      </div>
                       <div className="flex gap-2">
                         <Button
                           size="sm"
@@ -280,7 +289,7 @@ export function PacientesTab() {
                       <h2 className="font-display text-lg font-semibold text-foreground">
                         {selectedPatientData.nombre} {selectedPatientData.apellido}
                       </h2>
-                      <p className="text-sm text-muted">C.C. {selectedPatientData.cedula}</p>
+                      <p className="text-sm text-muted">C.I. {selectedPatientData.cedula}</p>
                       <p className="text-sm text-muted">{selectedPatientData.email}</p>
                       <p className="text-sm text-muted">{selectedPatientData.telefono}</p>
                     </div>

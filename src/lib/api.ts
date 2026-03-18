@@ -1,5 +1,5 @@
 export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api").replace(/\/$/, "");
-export const IMAGE_BASE_URL = API_BASE_URL.replace("/api", "");
+export const IMAGE_BASE_URL = API_BASE_URL.replace(/\/api$/, "");
 
 console.log("[API Config] Base URL:", API_BASE_URL);
 console.log("[API Config] Image Base:", IMAGE_BASE_URL);

@@ -1,0 +1,1 @@
+# Archivo para asegurar que la carpeta public no esté vacía y sea copiada en Docker

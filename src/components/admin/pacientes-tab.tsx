@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
@@ -12,11 +12,19 @@ interface Patient {
   id: string;
   nombre: string;
   apellido: string;
+  cedula: string;
   email: string;
   telefono: string;
   whatsapp?: string;
   estado: string;
   createdAt: string;
+}
+
+interface PaginatedPatients {
+  data: Patient[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 interface PatientAppointment {
@@ -29,29 +37,41 @@ interface PatientAppointment {
 }
 
 const statusLabel: Record<string, string> = {
-  pendiente: "Pendiente",
   confirmada: "Confirmada",
   completada: "Completada",
   cancelada: "Cancelada",
-  reprogramada: "Reprogramada",
 };
 
 const statusVariant: Record<string, "default" | "success" | "warning" | "info"> = {
-  pendiente: "warning",
   confirmada: "info",
   completada: "success",
   cancelada: "default",
 };
 
+const PAGE_SIZE = 10;
+
 export function PacientesTab() {
   const token = typeof window !== "undefined" ? localStorage.getItem("system-date-token") : null;
+  const queryClient = useQueryClient();
   const [selectedPatient, setSelectedPatient] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({ nombre: "", apellido: "", telefono: "" });
 
-  const { data: patients = [], isLoading } = useQuery({
-    queryKey: ["admin-patients"],
-    queryFn: () => api.get<Patient[]>("/admin/patients", { token: token! }),
+  const { data: paginatedResult, isLoading } = useQuery({
+    queryKey: ["admin-patients", searchQuery, page],
+    queryFn: () =>
+      api.get<PaginatedPatients>(
+        `/admin/patients?q=${encodeURIComponent(searchQuery)}&page=${page}&limit=${PAGE_SIZE}`,
+        { token: token! },
+      ),
     enabled: !!token,
   });
+
+  const patients = paginatedResult?.data ?? [];
+  const total = paginatedResult?.total ?? 0;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
 
   const { data: history = [] } = useQuery({
     queryKey: ["patient-history", selectedPatient],
@@ -60,12 +80,38 @@ export function PacientesTab() {
     enabled: !!token && !!selectedPatient,
   });
 
+  const updateMutation = useMutation({
+    mutationFn: (data: { nombre: string; apellido: string; telefono: string }) =>
+      api.patch(`/admin/patients/${selectedPatient}`, data, { token: token! }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-patients"] });
+      setEditing(false);
+    },
+  });
+
   const selectedPatientData = patients.find((p) => p.id === selectedPatient);
+
+  const startEdit = () => {
+    if (!selectedPatientData) return;
+    setEditForm({
+      nombre: selectedPatientData.nombre,
+      apellido: selectedPatientData.apellido,
+      telefono: selectedPatientData.telefono,
+    });
+    setEditing(true);
+  };
+
+  const handleSearch = (value: string) => {
+    setSearchQuery(value);
+    setPage(1);
+    setSelectedPatient(null);
+  };
 
   const handleExportPatients = () => {
     exportToCsv("pacientes.csv", patients.map((p) => ({
       Nombre: p.nombre,
       Apellido: p.apellido,
+      Cédula: p.cedula,
       Email: p.email,
       Teléfono: p.telefono,
       WhatsApp: p.whatsapp || "",
@@ -79,7 +125,7 @@ export function PacientesTab() {
         <div>
           <h1 className="font-display text-2xl font-bold text-foreground">Pacientes</h1>
           <p className="mt-1 text-sm text-muted">
-            {patients.length} pacientes registrados
+            {total} pacientes registrados
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={handleExportPatients}>
@@ -88,6 +134,22 @@ export function PacientesTab() {
           </svg>
           Exportar CSV
         </Button>
+      </div>
+
+      {/* Search */}
+      <div className="mb-6">
+        <div className="relative">
+          <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Buscar por nombre o cédula..."
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="w-full rounded-xl border border-border bg-surface py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-muted/50 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+          />
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-5">
@@ -101,38 +163,71 @@ export function PacientesTab() {
             </div>
           ) : patients.length === 0 ? (
             <GlassCard className="py-12 text-center">
-              <p className="text-sm text-muted">Aún no hay pacientes registrados.</p>
+              <p className="text-sm text-muted">
+                {searchQuery ? "No se encontraron pacientes." : "Aún no hay pacientes registrados."}
+              </p>
             </GlassCard>
           ) : (
-            <div className="space-y-2">
-              {patients.map((patient) => (
-                <button
-                  key={patient.id}
-                  onClick={() => setSelectedPatient(patient.id)}
-                  className="w-full text-left"
-                >
-                  <GlassCard
-                    className={`cursor-pointer py-4 ${
-                      selectedPatient === patient.id
-                        ? "border-primary ring-2 ring-primary/20"
-                        : "hover:border-primary/30"
-                    }`}
+            <>
+              <div className="space-y-2">
+                {patients.map((patient) => (
+                  <button
+                    key={patient.id}
+                    onClick={() => { setSelectedPatient(patient.id); setEditing(false); }}
+                    className="w-full text-left"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-light font-display text-sm font-semibold text-primary">
-                        {patient.nombre[0]}{patient.apellido[0]}
+                    <GlassCard
+                      className={`cursor-pointer py-4 ${
+                        selectedPatient === patient.id
+                          ? "border-primary ring-2 ring-primary/20"
+                          : "hover:border-primary/30"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-light font-display text-sm font-semibold text-primary">
+                          {patient.nombre[0]}{patient.apellido[0]}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-foreground">
+                            {patient.nombre} {patient.apellido}
+                          </p>
+                          <p className="truncate text-xs text-muted">
+                            C.C. {patient.cedula} · {patient.telefono}
+                          </p>
+                        </div>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-foreground">
-                          {patient.nombre} {patient.apellido}
-                        </p>
-                        <p className="truncate text-xs text-muted">{patient.email}</p>
-                      </div>
-                    </div>
-                  </GlassCard>
-                </button>
-              ))}
-            </div>
+                    </GlassCard>
+                  </button>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="mt-4 flex items-center justify-center gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="rounded-lg border border-border bg-surface p-2 text-sm text-muted transition-colors hover:text-foreground disabled:opacity-40"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.75 19.5 8.25 12l7.5-7.5" />
+                    </svg>
+                  </button>
+                  <span className="text-sm text-muted">
+                    {page} / {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="rounded-lg border border-border bg-surface p-2 text-sm text-muted transition-colors hover:text-foreground disabled:opacity-40"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -140,17 +235,68 @@ export function PacientesTab() {
         <div className="lg:col-span-3">
           {selectedPatientData ? (
             <GlassCard>
-              <div className="mb-6 flex items-center gap-4 border-b border-border/40 pb-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-light font-display text-lg font-bold text-primary">
-                  {selectedPatientData.nombre[0]}{selectedPatientData.apellido[0]}
+              <div className="mb-6 flex items-start justify-between border-b border-border/40 pb-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-light font-display text-lg font-bold text-primary">
+                    {selectedPatientData.nombre[0]}{selectedPatientData.apellido[0]}
+                  </div>
+                  {editing ? (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <input
+                          value={editForm.nombre}
+                          onChange={(e) => setEditForm((f) => ({ ...f, nombre: e.target.value }))}
+                          placeholder="Nombre"
+                          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
+                        />
+                        <input
+                          value={editForm.apellido}
+                          onChange={(e) => setEditForm((f) => ({ ...f, apellido: e.target.value }))}
+                          placeholder="Apellido"
+                          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
+                        />
+                      </div>
+                      <input
+                        value={editForm.telefono}
+                        onChange={(e) => setEditForm((f) => ({ ...f, telefono: e.target.value }))}
+                        placeholder="Teléfono"
+                        className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => updateMutation.mutate(editForm)}
+                          disabled={updateMutation.isPending}
+                        >
+                          {updateMutation.isPending ? "Guardando..." : "Guardar"}
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setEditing(false)}>
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <h2 className="font-display text-lg font-semibold text-foreground">
+                        {selectedPatientData.nombre} {selectedPatientData.apellido}
+                      </h2>
+                      <p className="text-sm text-muted">C.C. {selectedPatientData.cedula}</p>
+                      <p className="text-sm text-muted">{selectedPatientData.email}</p>
+                      <p className="text-sm text-muted">{selectedPatientData.telefono}</p>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <h2 className="font-display text-lg font-semibold text-foreground">
-                    {selectedPatientData.nombre} {selectedPatientData.apellido}
-                  </h2>
-                  <p className="text-sm text-muted">{selectedPatientData.email}</p>
-                  <p className="text-sm text-muted">{selectedPatientData.telefono}</p>
-                </div>
+                {!editing && (
+                  <button
+                    onClick={startEdit}
+                    className="rounded-lg p-2 text-muted transition-colors hover:bg-surface hover:text-foreground"
+                    title="Editar paciente"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
+                    </svg>
+                  </button>
+                )}
               </div>
 
               <h3 className="mb-3 text-sm font-semibold text-foreground">Historial de citas</h3>

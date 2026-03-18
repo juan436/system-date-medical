@@ -18,6 +18,7 @@ function RegistroForm() {
   const [form, setForm] = useState({
     nombre: "",
     apellido: "",
+    cedula: "",
     email: "",
     telefono: "",
     password: "",
@@ -48,6 +49,7 @@ function RegistroForm() {
       await register({
         nombre: form.nombre,
         apellido: form.apellido,
+        cedula: form.cedula,
         email: form.email,
         telefono: form.telefono,
         password: form.password,
@@ -90,6 +92,15 @@ function RegistroForm() {
             required
           />
         </div>
+
+        <Input
+          id="cedula"
+          label="Cédula"
+          placeholder="12345678"
+          value={form.cedula}
+          onChange={(e) => updateField("cedula", e.target.value)}
+          required
+        />
 
         <Input
           id="email"

@@ -3,6 +3,7 @@ import { api } from "@/lib/api";
 export interface RegisterPayload {
   nombre: string;
   apellido: string;
+  cedula: string;
   email: string;
   password: string;
   telefono: string;

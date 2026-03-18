@@ -86,7 +86,6 @@ export function AgendaTab() {
   const MONTH_SHORT = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 
   const activeAppointments = appointments.filter((a) => a.estado !== "cancelada");
-  const pendingCount = appointments.filter((a) => a.estado === "pendiente").length;
 
   const weekRangeLabel = `${weekDates[0].getDate()} ${MONTH_SHORT[weekDates[0].getMonth()]} - ${weekDates[6].getDate()} ${MONTH_SHORT[weekDates[6].getMonth()]}`;
 
@@ -104,9 +103,6 @@ export function AgendaTab() {
           <h1 className="font-display text-2xl font-bold text-foreground">Agenda</h1>
           <p className="mt-1 text-sm text-muted">
             {activeAppointments.length} citas para este día
-            {pendingCount > 0 && (
-              <span className="ml-2 text-amber-600">({pendingCount} por confirmar)</span>
-            )}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={handleExportCsv}>
@@ -227,39 +223,27 @@ export function AgendaTab() {
                   {statusLabel[appt.estado] || appt.estado}
                 </Badge>
 
-                {appt.estado === "pendiente" && (
+                {appt.estado === "confirmada" && (
                   <div className="flex gap-1">
                     <button
-                      onClick={() => updateStatus.mutate({ id: appt.id, action: "confirm" })}
-                      className="rounded-lg p-2 text-primary transition-colors hover:bg-primary-light"
-                      title="Confirmar"
+                      onClick={() => updateStatus.mutate({ id: appt.id, action: "complete" })}
+                      className="rounded-lg p-2 text-emerald-500 transition-colors hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                      title="Marcar como atendida"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m4.5 12.75 6 6 9-13.5" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                       </svg>
                     </button>
                     <button
                       onClick={() => updateStatus.mutate({ id: appt.id, action: "cancel" })}
                       className="rounded-lg p-2 text-red-400 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20"
-                      title="Cancelar"
+                      title="Cancelar cita"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18 18 6M6 6l12 12" />
                       </svg>
                     </button>
                   </div>
-                )}
-
-                {appt.estado === "confirmada" && (
-                  <button
-                    onClick={() => updateStatus.mutate({ id: appt.id, action: "complete" })}
-                    className="rounded-lg p-2 text-emerald-500 transition-colors hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
-                    title="Marcar como atendida"
-                  >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    </svg>
-                  </button>
                 )}
               </div>
             </GlassCard>

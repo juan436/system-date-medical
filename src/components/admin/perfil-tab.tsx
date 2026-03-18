@@ -5,9 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { api } from "@/lib/api";
-
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api").replace("/api", "").replace(/\/$/, "");
+import { api, IMAGE_BASE_URL } from "@/lib/api";
 
 interface DoctorProfile {
   id: string;
@@ -114,7 +112,7 @@ export function PerfilTab({ token }: { token: string | null }) {
   };
 
   // Determine which image to show: local preview > server image > placeholder
-  const serverImage = hasProfile && profile.fotoPerfil ? `${API_BASE}${profile.fotoPerfil}` : null;
+  const serverImage = hasProfile && profile.fotoPerfil ? `${IMAGE_BASE_URL}${profile.fotoPerfil}` : null;
   const displayImage = localPreview || serverImage;
 
   const addLogro = () => setForm((f) => ({ ...f, logrosAcademicos: [...f.logrosAcademicos, ""] }));

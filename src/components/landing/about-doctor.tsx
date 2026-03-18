@@ -2,9 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { api } from "@/lib/api";
-
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api").replace("/api", "").replace(/\/$/, "");
+import { api, IMAGE_BASE_URL } from "@/lib/api";
 
 interface DoctorProfile {
   nombreCompleto: string;
@@ -58,7 +56,7 @@ export function AboutDoctor() {
             <div className="relative aspect-[3/4] overflow-hidden rounded-3xl shadow-2xl shadow-primary/10">
               {doctor?.fotoPerfil ? (
                 <img
-                  src={`${API_BASE}${doctor.fotoPerfil}`}
+                  src={`${IMAGE_BASE_URL}${doctor.fotoPerfil}`}
                   alt={name}
                   className="h-full w-full object-cover"
                 />

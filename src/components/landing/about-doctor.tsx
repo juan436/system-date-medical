@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:3001";
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api").replace("/api", "").replace(/\/$/, "");
 
 interface DoctorProfile {
   nombreCompleto: string;

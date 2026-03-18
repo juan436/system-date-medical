@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SystemDate — Frontend
 
-## Getting Started
+Interfaz de usuario moderna y profesional construida con **Next.js**, enfocada en la velocidad y la experiencia del usuario.
 
-First, run the development server:
+## 🚀 Tecnologías
+
+- **Framework**: Next.js 15 (App Router)
+- **Estilos**: TailwindCSS 4 (Glassmorphism, animaciones suaves)
+- **Estado/Data Fetching**: TanStack React Query v5
+- **Iconografía**: Lucide React
+- **Lenguaje**: TypeScript
+
+## ✨ Características de Interfaz
+
+- **Landing Page Premium**: Diseño visualmente impactante con efectos de blur y gradientes.
+- **Wizard de Agendamiento**: Proceso simplificado en 3 pasos.
+- **Panel Administrativo**: Interfaz tipo SPA con gestión de agenda, servicios y perfil.
+- **Responsive**: Totalmente adaptado a dispositivos móviles y escritorio.
+
+## 🛠️ Instalación y Uso
+
+1. Instalar dependencias:
+   ```bash
+   pnpm install
+   ```
+
+2. Configurar variables de entorno:
+   Copiar `.env.local.example` a `.env.local` y ajustar la URL de la API.
+
+3. Correr en desarrollo:
+   ```bash
+   pnpm dev
+   ```
+
+## 📁 Estructura src/
+
+- `/app`: Rutas del sistema (admin, auth, mi-cuenta, agendar).
+- `/components`: Componentes reutilizables organizados por módulos.
+- `/hooks`: Lógica de estado y llamadas a API con React Query.
+- `/services`: Definición de peticiones HTTP.
+- `/lib`: Utilidades y configuraciones.
+
+## 🐳 Docker
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+docker build -t system-date-frontend .
+docker compose up -d
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
